@@ -1,0 +1,57 @@
+workflowExternalId: 'wf_icapi_data_pipeline'
+version: '1'
+workflowDefinition:
+  description: 'Run oee calculation tasks in sequence'
+  tasks:
+    - externalId: 'first_task_create_asset_hierarchy'
+      type: transformation
+      parameters:
+        transformation:
+          externalId: 'create_asset_hierarchy'
+          concurrencyPolicy: fail
+      name: 'Task One creating asset hierarchy'
+      description: First task
+      retries: 3
+      timeout: 3600
+      onFailure: 'abortWorkflow'
+
+    - externalId: 'second_task_contextualize_ts_assets'
+      type: 'transformation'
+      parameters:
+        transformation:
+          externalId: 'contextualize_ts_assets'
+          concurrencyPolicy: fail
+      name: 'Task Two contextualizing ts and assets'
+      description: Second task
+      retries: 3
+      timeout: 3600
+      onFailure: 'abortWorkflow'
+      dependsOn:
+        - externalId: 'first_task_create_asset_hierarchy'
+
+    - externalId: 'third_task_extracting_ts_data_points'
+      type: 'function'
+      parameters:
+        function:
+          externalId: icapi_datapoints_extractor
+          data: { "hours": 1 }
+      retries: 3
+      timeout: 3600
+      onFailure: 'abortWorkflow'
+      dependsOn:
+        - externalId: 'second_task_contextualize_ts_assets'
+
+    - externalId: 'fourth_task_calculate_oee'
+      type: 'function'
+      parameters:
+        function:
+          externalId: oee_timeseries
+          data: { "minutes": 5 }
+      retries: 3
+      timeout: 3600
+      onFailure: 'abortWorkflow'
+      dependsOn:
+        - externalId: 'third_task_extracting_ts_data_points'
+
+
+        
